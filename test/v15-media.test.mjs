@@ -2,7 +2,10 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { ReplaySubject, Subject } from 'rxjs'
-import { CameraSource } from '../lib/camera-source.js'
+import {
+  CameraSource,
+  getReturnAudioPrepareStreamRequest,
+} from '../lib/camera-source.js'
 import { FragmentedMp4Parser } from '../lib/fragmented-mp4-parser.js'
 import { ResourceGovernor } from '../lib/hksv-work-queue.js'
 import { ManagedFfmpegProcess } from '../lib/managed-ffmpeg-process.js'
@@ -101,6 +104,22 @@ test('normalizes v15 media settings while preserving legacy HKSV semantics', () 
   assert.throws(
     () => normalizeMediaConfig({ media: { recording: { maxDurationSeconds: -1 } } }),
     /integer from 0 to 300/,
+  )
+})
+
+test('uses the Homebridge address for FFmpeg return-audio input binding', () => {
+  const request = {
+    sessionID: 'session',
+    sourceAddress: '192.168.1.20',
+    targetAddress: '192.168.1.30',
+    addressVersion: 'ipv4',
+    audio: { port: 5000 },
+    video: { port: 5001 },
+  }
+
+  assert.equal(
+    getReturnAudioPrepareStreamRequest(request).targetAddress,
+    request.sourceAddress,
   )
 })
 

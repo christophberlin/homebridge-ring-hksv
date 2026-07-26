@@ -111,6 +111,18 @@ function getLiveStreamAbortError() {
   return error
 }
 
+export function getReturnAudioPrepareStreamRequest(
+  request: PrepareStreamRequest,
+) {
+  // ReturnAudioTranscoder writes this address into the input SDP's c= line.
+  // FFmpeg uses that address for its local UDP bind, so it must be the
+  // Homebridge address, not the HomeKit controller's target address.
+  return {
+    ...request,
+    targetAddress: request.sourceAddress,
+  }
+}
+
 class StreamingSessionWrapper {
   audioSsrc = hap.CameraController.generateSynchronisationSource()
   videoSsrc = hap.CameraController.generateSynchronisationSource()
@@ -344,7 +356,9 @@ class StreamingSessionWrapper {
       }),
       releaseReturnAudioFfmpeg = hksvRecordingQueue.trackFfmpegProcess(),
       returnAudioTranscoder = new ReturnAudioTranscoder({
-        prepareStreamRequest: this.prepareStreamRequest,
+        prepareStreamRequest: getReturnAudioPrepareStreamRequest(
+          this.prepareStreamRequest,
+        ),
         startStreamRequest: request,
         incomingAudioOptions: {
           ssrc: this.audioSsrc,
