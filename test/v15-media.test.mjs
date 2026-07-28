@@ -6,6 +6,7 @@ import {
   CameraSource,
   getReturnAudioPrepareStreamRequest,
 } from '../lib/camera-source.js'
+import { addMotionWatchdog } from '../lib/camera.js'
 import { FragmentedMp4Parser } from '../lib/fragmented-mp4-parser.js'
 import { ResourceGovernor } from '../lib/hksv-work-queue.js'
 import { ManagedFfmpegProcess } from '../lib/managed-ffmpeg-process.js'
@@ -53,6 +54,33 @@ async function within(promise, timeoutMs) {
     }),
   ])
 }
+
+test('resets the motion watchdog on push events and clears motion after inactivity', async () => {
+  const events = new Subject()
+  const values = []
+  const subscription = addMotionWatchdog(events, 40).subscribe((value) => {
+    values.push(value)
+  })
+
+  try {
+    events.next(true)
+    await delay(20)
+    events.next(true)
+    await delay(20)
+
+    assert.deepEqual(values, [true, true])
+
+    await delay(50)
+    assert.deepEqual(values, [true, true, false])
+
+    events.next(false)
+    assert.deepEqual(values, [true, true, false, false])
+    await delay(50)
+    assert.deepEqual(values, [true, true, false, false])
+  } finally {
+    subscription.unsubscribe()
+  }
+})
 
 function startManagedNodeChild({ ignoreTerm, stopGraceMs }) {
   let markReady

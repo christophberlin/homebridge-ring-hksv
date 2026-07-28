@@ -19,6 +19,26 @@ import { delay, logError, logInfo } from 'ring-client-api/util'
 import { EMPTY, firstValueFrom, from, merge, of, timer } from 'rxjs'
 import type { Observable } from 'rxjs'
 
+export const MOTION_WATCHDOG_MS = 30_000
+
+export function addMotionWatchdog(
+  motionEvents: Observable<boolean>,
+  watchdogMs = MOTION_WATCHDOG_MS,
+): Observable<boolean> {
+  return motionEvents.pipe(
+    switchMap((motion) => {
+      if (!motion) {
+        return of(false)
+      }
+
+      return merge(
+        of(true),
+        timer(watchdogMs).pipe(map(() => false)),
+      )
+    }),
+  )
+}
+
 export class Camera extends BaseDataAccessory<RingCamera> {
   private inHomeDoorbellStatus: boolean | undefined
   private cameraSource
@@ -301,19 +321,21 @@ export class Camera extends BaseDataAccessory<RingCamera> {
         ),
       )
 
-    if (!enableMotionHistoryFallback) {
-      return pushMotionEvents
+    if (enableMotionHistoryFallback) {
+      this.device.onNewNotification.subscribe((notification) => {
+        const dingId = notification.data?.event?.ding?.id
+
+        if (dingId) {
+          seenEventIds.add(String(dingId))
+        }
+      })
     }
 
-    this.device.onNewNotification.subscribe((notification) => {
-      const dingId = notification.data?.event?.ding?.id
-
-      if (dingId) {
-        seenEventIds.add(String(dingId))
-      }
-    })
-
-    return merge(pushMotionEvents, polledMotionEvents)
+    return addMotionWatchdog(
+      enableMotionHistoryFallback
+        ? merge(pushMotionEvents, polledMotionEvents)
+        : pushMotionEvents,
+    )
   }
 
   private async loadSnapshotForEvent<T>(

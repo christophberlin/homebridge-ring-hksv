@@ -24,6 +24,7 @@
       "enableHksv": {
         "title": "Enable HKSV (Experimental)",
         "type": "boolean",
+        "default": true,
         "description": "Enables HomeKit Secure Video services for supported Ring cameras. This implementation is currently in-progress."
       },
       "media": {
