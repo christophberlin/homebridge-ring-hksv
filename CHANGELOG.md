@@ -10,6 +10,16 @@
 
 ## Unreleased
 
+- Log when HKSV services are disabled for a camera because
+  `disableHksvOnBattery` matched, instead of silently exposing no recording
+  services. Battery-model cameras that are permanently powered previously
+  looked identical to a broken pipeline.
+- Add a Ring push notification health watchdog that reports when no push
+  notification has arrived for six hours. Missing Ring push delivery is the
+  most common cause of HKSV never recording.
+- Report HKSV recording requests that arrive before HomeKit has enabled
+  recording at info level, including the Home app setting to change.
+
 - Establish the permanent HKSV support boundary: only always-powered premium
   Ring cameras on capable Homebridge hosts are supported. Battery, solar, and
   low-performance deployments, including Raspberry Pi-class hosts, are

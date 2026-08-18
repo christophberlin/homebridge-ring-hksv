@@ -432,6 +432,7 @@ export class CameraSource
   implements CameraStreamingDelegate, CameraRecordingDelegate
 {
   public controller
+  public readonly hksvEnabled: boolean
   private sessions: { [sessionKey: string]: StreamingSessionWrapper } = {}
   private cachedSnapshot?: Buffer
   private ringCamera
@@ -449,8 +450,18 @@ export class CameraSource
     this.config = config
     this.mediaIngress = new RingMediaIngress(ringCamera)
 
-    const enableHksv =
-      config.enableHksv && !(config.disableHksvOnBattery && ringCamera.hasBattery)
+    const hksvDisabledOnBattery = Boolean(
+        config.enableHksv && config.disableHksvOnBattery && ringCamera.hasBattery,
+      ),
+      enableHksv = Boolean(config.enableHksv) && !hksvDisabledOnBattery
+
+    this.hksvEnabled = enableHksv
+
+    if (hksvDisabledOnBattery) {
+      logInfo(
+        `HKSV services disabled for ${ringCamera.name} because "disableHksvOnBattery" is enabled and Ring reports this camera as battery powered. Set "disableHksvOnBattery": false to enable HKSV on battery-model cameras that are permanently powered.`,
+      )
+    }
 
     const controllerOptions: any = {
       cameraStreamCount: enableHksv ? 1 : 10,
@@ -869,8 +880,8 @@ export class CameraSource
     logInfo(`HKSV recording stream requested for ${this.ringCamera.name} (streamId=${streamId})`)
 
     if (!this.recordingActive || !this.recordingConfiguration) {
-      logDebug(
-        `HKSV recording request ignored for ${this.ringCamera.name} because recording is not active or configured`,
+      logInfo(
+        `HKSV recording request ignored for ${this.ringCamera.name} because HomeKit has not enabled recording (recordingActive=${this.recordingActive}, hasRecordingConfiguration=${Boolean(this.recordingConfiguration)}). Set this camera to "Stream & Allow Recording" in the Home app.`,
       )
       return
     }

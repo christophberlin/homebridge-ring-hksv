@@ -6,7 +6,10 @@ import {
   CameraSource,
   getReturnAudioPrepareStreamRequest,
 } from '../lib/camera-source.js'
-import { addMotionWatchdog } from '../lib/camera.js'
+import {
+  addMotionWatchdog,
+  addNotificationHealthWatchdog,
+} from '../lib/camera.js'
 import { FragmentedMp4Parser } from '../lib/fragmented-mp4-parser.js'
 import { ResourceGovernor } from '../lib/hksv-work-queue.js'
 import { ManagedFfmpegProcess } from '../lib/managed-ffmpeg-process.js'
@@ -327,4 +330,49 @@ test('exposes all media recording controls and applies CBR arguments', async () 
     '-minrate', '2000k', '-maxrate', '2000k',
   ])
   assert.equal(cbrArgs.includes('-crf'), false)
+})
+
+test('warns once when Ring push notifications stop and re-arms when they resume', async () => {
+  const notifications = new Subject()
+  const warnings = []
+  const subscription = addNotificationHealthWatchdog(notifications, 60).subscribe(
+    () => warnings.push(Date.now()),
+  )
+
+  await delay(35)
+  assert.equal(warnings.length, 0, 'should stay quiet before the timeout elapses')
+
+  notifications.next({})
+  await delay(35)
+  assert.equal(warnings.length, 0, 'a push notification should reset the watchdog')
+
+  await delay(60)
+  assert.equal(warnings.length, 1, 'should report sustained push notification silence')
+
+  await delay(80)
+  assert.equal(warnings.length, 1, 'should not repeat the warning while still silent')
+
+  notifications.next({})
+  await delay(90)
+  assert.equal(warnings.length, 2, 'should re-arm after notifications resume')
+
+  subscription.unsubscribe()
+})
+
+test('ignores HKSV recording requests until HomeKit enables recording', async () => {
+  const source = Object.create(CameraSource.prototype)
+  source.ringCamera = { id: 'test-camera', name: 'test camera' }
+  source.config = {}
+  source.recordingActive = false
+  source.recordingConfiguration = undefined
+  source.closedRecordingStreams = new Set()
+  source.recordingWaiters = new Map()
+
+  const result = await within(source.handleRecordingStreamRequest(7).next(), 1_000)
+
+  assert.equal(
+    result.done,
+    true,
+    'should not emit packets before HomeKit enables recording',
+  )
 })

@@ -20,6 +20,24 @@ import { EMPTY, firstValueFrom, from, merge, of, timer } from 'rxjs'
 import type { Observable } from 'rxjs'
 
 export const MOTION_WATCHDOG_MS = 30_000
+export const NOTIFICATION_HEALTH_TIMEOUT_MS = 6 * 60 * 60 * 1000
+export const NOTIFICATION_TROUBLESHOOTING_URL =
+  'https://github.com/dgreif/ring/wiki/Notification-Troubleshooting'
+
+/**
+ * Emits once whenever no Ring push notification has arrived for `timeoutMs`.
+ * Ring push delivery silently breaking is the most common reason HKSV never
+ * records, so it is reported instead of waiting for motion that never arrives.
+ * The watchdog re-arms when notifications resume.
+ */
+export function addNotificationHealthWatchdog<T>(
+  pushNotifications: Observable<T>,
+  timeoutMs = NOTIFICATION_HEALTH_TIMEOUT_MS,
+): Observable<true> {
+  return merge(of(null), pushNotifications).pipe(
+    switchMap(() => timer(timeoutMs).pipe(map(() => true as const))),
+  )
+}
 
 export function addMotionWatchdog(
   motionEvents: Observable<boolean>,
@@ -70,6 +88,18 @@ export class Camera extends BaseDataAccessory<RingCamera> {
       { ChargingState, StatusLowBattery } = Characteristic
 
     accessory.configureController(this.cameraSource.controller)
+
+    if (this.cameraSource.hksvEnabled) {
+      addNotificationHealthWatchdog(this.device.onNewNotification).subscribe(
+        () => {
+          logError(
+            `${this.device.name} has received no Ring push notifications for ${Math.round(
+              NOTIFICATION_HEALTH_TIMEOUT_MS / 3_600_000,
+            )} hours, so HKSV will not record motion. Ring push delivery is the most common cause of missing HKSV recordings. See ${NOTIFICATION_TROUBLESHOOTING_URL}, or enable "forceRefreshRingPushCredentials" once and restart Homebridge.`,
+          )
+        },
+      )
+    }
 
     this.registerCharacteristic({
       characteristicType: Characteristic.Mute,

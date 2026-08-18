@@ -172,6 +172,43 @@ remain first-class risks even on supported always-powered premium deployments.
 
 ## Prioritized improvement roadmap
 
+### Evidence-based root cause ranking
+
+Reviewing every upstream issue report (`#5`, `#8`, `#10`, `#11`) rather than
+the pipeline code alone changes the priority order:
+
+| Root cause | Reported by | Inside the supported boundary? |
+| --- | --- | --- |
+| Ring push notifications never arrive (stale authorized client devices or push credentials) | wired doorbell reports in `#5` and `#11` | Yes |
+| Ring app configuration (linked devices, Smart Alerts "Other Motion" disabled) | Spotlight Cam that was permanently plugged in, `#5` | Yes |
+| `disableHksvOnBattery` silently excluding a permanently powered battery-model camera | implicit in `#5` | Self-inflicted |
+| UDP `bind failed: Can't assign requested address` | `#10`, on macOS with a static IP | Yes |
+| Host I/O and memory pressure, FFmpeg process buildup | Raspberry Pi reports in `#5` and `#8` | No |
+
+Two conclusions follow.
+
+First, **the support boundary does not address the most common failure**. Every
+confirmed "no recordings" report involved either a wired camera or a capable
+host. Restricting scope to always-powered premium cameras removes the noisiest
+reports, not the most frequent ones. The boundary remains a legitimate product
+decision, but it must not be recorded as a reliability fix.
+
+Second, **trigger delivery dominates pipeline correctness**. The v15 refactor
+hardened FFmpeg lifecycle handling, which was never the leading cause of
+missing recordings. Work that makes the plugin explain itself is worth more
+than further encoder tuning.
+
+### Implemented
+
+- HKSV exclusions caused by `disableHksvOnBattery` are now logged with the
+  setting to change. Previously a camera reporting a battery was silently given
+  no recording services, which is indistinguishable from a broken pipeline.
+- A Ring push notification health watchdog reports sustained notification
+  silence and points at the troubleshooting guide and refresh toggles.
+- Recording requests that arrive before HomeKit enables recording are reported
+  at info level with the Home app setting to change, separating "HomeKit never
+  asked" from "the pipeline failed".
+
 ### P0 - Make recording observability explicit
 
 Add a per-camera HKSV state machine and counters for:
