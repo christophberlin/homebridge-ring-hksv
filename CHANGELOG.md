@@ -10,6 +10,11 @@
 
 ## Unreleased
 
+- Establish the permanent HKSV support boundary: only always-powered premium
+  Ring cameras on capable Homebridge hosts are supported. Battery, solar, and
+  low-performance deployments, including Raspberry Pi-class hosts, are
+  permanently out of scope and will not be treated as future reliability
+  targets.
 - Add an HKSV recording stall watchdog so motion-triggered FFmpeg processes are stopped if they stop producing fragmented MP4 packets.
 - Stop HKSV recording live calls immediately when HomeKit closes a recording stream, and cancel queued recording requests that are already closed before starting FFmpeg. This prevents stale HKSV FFmpeg processes from accumulating after abandoned recording sessions.
 

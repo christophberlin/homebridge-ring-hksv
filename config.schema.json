@@ -30,7 +30,7 @@
       "media": {
         "title": "Media Engine (v15)",
         "type": "object",
-        "description": "Adaptive media profile with optional validated recording overrides. This supersedes the legacy HKSV tuning fields.",
+        "description": "Adaptive media profile with optional validated recording overrides for supported always-powered premium cameras. lowPower is retained only for legacy compatibility and is unsupported.",
         "additionalProperties": false,
         "properties": {
           "profile": {
@@ -38,7 +38,7 @@
             "default": "adaptive",
             "oneOf": [
               { "title": "adaptive", "enum": ["adaptive"] },
-              { "title": "lowPower", "enum": ["lowPower"] },
+              { "title": "lowPower (unsupported legacy)", "enum": ["lowPower"] },
               { "title": "quality", "enum": ["quality"] }
             ]
           },
@@ -145,7 +145,7 @@
       "disableHksvOnBattery": {
         "title": "Disable HKSV On Battery Cameras",
         "type": "boolean",
-        "description": "If enabled, HKSV is disabled on battery-powered cameras to reduce battery and network impact.",
+        "description": "Legacy compatibility setting. Battery-powered camera HKSV is permanently out of scope and unsupported regardless of this setting.",
         "default": true
       },
       "hksvPrebufferLengthMs": {
@@ -172,7 +172,7 @@
       "hksvPerformanceMode": {
         "title": "HKSV Performance Mode",
         "type": "string",
-        "description": "High-level HKSV tuning profile. Use rpi for Raspberry Pi and other small computers; it favors remuxing, lower advertised recording tiers, and conservative concurrency.",
+        "description": "High-level HKSV tuning profile for supported always-powered premium cameras. The rpi option is retained only for legacy compatibility and is unsupported.",
         "default": "balanced",
         "oneOf": [
           {
@@ -180,7 +180,7 @@
             "enum": ["balanced"]
           },
           {
-            "title": "rpi",
+            "title": "rpi (unsupported legacy)",
             "enum": ["rpi"]
           },
           {
@@ -201,7 +201,7 @@
         "type": "integer",
         "minimum": 1,
         "maximum": 4,
-        "description": "Maximum number of simultaneous HKSV recording pipelines. Raspberry Pi users should keep this at 1."
+        "description": "Maximum number of simultaneous HKSV recording pipelines for supported capable hosts."
       },
       "hksvVideoBitrateKbps": {
         "title": "HKSV Video Bitrate (kbps)",
